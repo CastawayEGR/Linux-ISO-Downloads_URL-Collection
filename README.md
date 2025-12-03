@@ -2,121 +2,37 @@
 
 ## Debian
 
-### Debian 13 Cinnamon
+### Debian 13 Cinnamon (Stable)
 - [debian-live-13.2.0-amd64-cinnamon.iso](https://cdimage.debian.org/debian-cd/current-live/amd64/iso-hybrid/debian-live-13.2.0-amd64-cinnamon.iso)
 
-### Debian 13 GNOME
+### Debian 13 GNOME (Stable)
 - [debian-live-13.2.0-amd64-gnome.iso](https://cdimage.debian.org/debian-cd/current-live/amd64/iso-hybrid/debian-live-13.2.0-amd64-gnome.iso)
 
-### Debian 13 KDE Plasma
+### Debian 13 KDE Plasma (Stable)
 - [debian-live-13.2.0-amd64-kde.iso](https://cdimage.debian.org/debian-cd/current-live/amd64/iso-hybrid/debian-live-13.2.0-amd64-kde.iso)
 
-### Debian 13 LXDE
+### Debian 13 LXDE (Stable)
 - [debian-live-13.2.0-amd64-lxde.iso](https://cdimage.debian.org/debian-cd/current-live/amd64/iso-hybrid/debian-live-13.2.0-amd64-lxde.iso)
 
-### Debian 13 LXQt
+### Debian 13 LXQt (Stable)
 - [debian-live-13.2.0-amd64-lxqt.iso](https://cdimage.debian.org/debian-cd/current-live/amd64/iso-hybrid/debian-live-13.2.0-amd64-lxqt.iso)
 
-### Debian 13 MATE
+### Debian 13 MATE (Stable)
 - [debian-live-13.2.0-amd64-mate.iso](https://cdimage.debian.org/debian-cd/current-live/amd64/iso-hybrid/debian-live-13.2.0-amd64-mate.iso)
 
-### Debian 13 Xfce
+### Debian 13 Xfce (Stable)
 - [debian-live-13.2.0-amd64-xfce.iso](https://cdimage.debian.org/debian-cd/current-live/amd64/iso-hybrid/debian-live-13.2.0-amd64-xfce.iso)
 
-
-### Debian 13 GNOME
-- [debian-live-13.2.0-amd64-gnome.iso](https://cdimage.debian.org/debian-cd/current-live/amd64/iso-hybrid/debian-live-13.2.0-amd64-gnome.iso)
-
-### Debian 13 KDE Plasma
-- [debian-live-13.2.0-amd64-kde.iso](https://cdimage.debian.org/debian-cd/current-live/amd64/iso-hybrid/debian-live-13.2.0-amd64-kde.iso)
-
-### Debian 13 LXDE
-- [debian-live-13.2.0-amd64-lxde.iso](https://cdimage.debian.org/debian-cd/current-live/amd64/iso-hybrid/debian-live-13.2.0-amd64-lxde.iso)
-
-### Debian 13 LXQt
-- [debian-live-13.2.0-amd64-lxqt.iso](https://cdimage.debian.org/debian-cd/current-live/amd64/iso-hybrid/debian-live-13.2.0-amd64-lxqt.iso)
-
-### Debian 13 MATE
-- [debian-live-13.2.0-amd64-mate.iso](https://cdimage.debian.org/debian-cd/current-live/amd64/iso-hybrid/debian-live-13.2.0-amd64-mate.iso)
-
-### Debian 13 Xfce
-- [debian-live-13.2.0-amd64-xfce.iso](https://cdimage.debian.org/debian-cd/current-live/amd64/iso-hybrid/debian-live-13.2.0-amd64-xfce.iso)
-
-
-### Debian 13 GNOME
-- [debian-live-13.2.0-amd64-gnome.iso](https://cdimage.debian.org/debian-cd/current-live/amd64/iso-hybrid/debian-live-13.2.0-amd64-gnome.iso)
-
-### Debian 13 KDE Plasma
-- [debian-live-13.2.0-amd64-kde.iso](https://cdimage.debian.org/debian-cd/current-live/amd64/iso-hybrid/debian-live-13.2.0-amd64-kde.iso)
-
-### Debian 13 LXDE
-- [debian-live-13.2.0-amd64-lxde.iso](https://cdimage.debian.org/debian-cd/current-live/amd64/iso-hybrid/debian-live-13.2.0-amd64-lxde.iso)
-
-### Debian 13 LXQt
-- [debian-live-13.2.0-amd64-lxqt.iso](https://cdimage.debian.org/debian-cd/current-live/amd64/iso-hybrid/debian-live-13.2.0-amd64-lxqt.iso)
-
-### Debian 13 MATE
-- [debian-live-13.2.0-amd64-mate.iso](https://cdimage.debian.org/debian-cd/current-live/amd64/iso-hybrid/debian-live-13.2.0-amd64-mate.iso)
-
-### Debian 13 Xfce
-- [debian-live-13.2.0-amd64-xfce.iso](https://cdimage.debian.org/debian-cd/current-live/amd64/iso-hybrid/debian-live-13.2.0-amd64-xfce.iso)
-
-
-### Debian 13 GNOME
-- [debian-live-13.2.0-amd64-gnome.iso](https://cdimage.debian.org/debian-cd/current-live/amd64/iso-hybrid/debian-live-13.2.0-amd64-gnome.iso)
-
-### Debian 13 KDE Plasma
-- [debian-live-13.2.0-amd64-kde.iso](https://cdimage.debian.org/debian-cd/current-live/amd64/iso-hybrid/debian-live-13.2.0-amd64-kde.iso)
-
-### Debian 13 LXDE
-- [debian-live-13.2.0-amd64-lxde.iso](https://cdimage.debian.org/debian-cd/current-live/amd64/iso-hybrid/debian-live-13.2.0-amd64-lxde.iso)
-
-### Debian 13 LXQt
-- [debian-live-13.2.0-amd64-lxqt.iso](https://cdimage.debian.org/debian-cd/current-live/amd64/iso-hybrid/debian-live-13.2.0-amd64-lxqt.iso)
-
-### Debian 13 MATE
-- [debian-live-13.2.0-amd64-mate.iso](https://cdimage.debian.org/debian-cd/current-live/amd64/iso-hybrid/debian-live-13.2.0-amd64-mate.iso)
-
-### Debian 13 Xfce
-- [debian-live-13.2.0-amd64-xfce.iso](https://cdimage.debian.org/debian-cd/current-live/amd64/iso-hybrid/debian-live-13.2.0-amd64-xfce.iso)
-
-
-### Debian 13 GNOME
-- [debian-live-13.2.0-amd64-gnome.iso](https://cdimage.debian.org/debian-cd/current-live/amd64/iso-hybrid/debian-live-13.2.0-amd64-gnome.iso)
-
-### Debian 13 KDE Plasma
-- [debian-live-13.2.0-amd64-kde.iso](https://cdimage.debian.org/debian-cd/current-live/amd64/iso-hybrid/debian-live-13.2.0-amd64-kde.iso)
-
-### Debian 13 LXDE
-- [debian-live-13.2.0-amd64-lxde.iso](https://cdimage.debian.org/debian-cd/current-live/amd64/iso-hybrid/debian-live-13.2.0-amd64-lxde.iso)
-
-### Debian 13 LXQt
-- [debian-live-13.2.0-amd64-lxqt.iso](https://cdimage.debian.org/debian-cd/current-live/amd64/iso-hybrid/debian-live-13.2.0-amd64-lxqt.iso)
-
-### Debian 13 MATE
-- [debian-live-13.2.0-amd64-mate.iso](https://cdimage.debian.org/debian-cd/current-live/amd64/iso-hybrid/debian-live-13.2.0-amd64-mate.iso)
-
-### Debian 13 Xfce
-- [debian-live-13.2.0-amd64-xfce.iso](https://cdimage.debian.org/debian-cd/current-live/amd64/iso-hybrid/debian-live-13.2.0-amd64-xfce.iso)
-
-
-### Debian 13
-- [Cinnamon](https://cdimage.debian.org/cdimage/weekly-live-builds/amd64/iso-hybrid/debian-live-testing-amd64-cinnamon.iso)
-- [GNOME](https://cdimage.debian.org/cdimage/weekly-live-builds/amd64/iso-hybrid/debian-live-testing-amd64-gnome.iso)
-- [KDE](https://cdimage.debian.org/cdimage/weekly-live-builds/amd64/iso-hybrid/debian-live-testing-amd64-kde.iso)
-- [LXDE](https://cdimage.debian.org/cdimage/weekly-live-builds/amd64/iso-hybrid/debian-live-testing-amd64-lxde.iso)
-- [LXQt](https://cdimage.debian.org/cdimage/weekly-live-builds/amd64/iso-hybrid/debian-live-testing-amd64-lxqt.iso)
-- [Xfce](https://cdimage.debian.org/cdimage/weekly-live-builds/amd64/iso-hybrid/debian-live-testing-amd64-xfce.iso)
 
 ## Xubuntu
 - [Desktop](https://cdimage.ubuntu.com/xubuntu/releases/24.04/release/xubuntu-24.04-desktop-amd64.iso)
 - [Minimal](https://cdimage.ubuntu.com/xubuntu/releases/24.04/release/xubuntu-24.04-minimal-amd64.iso)
 
 ## Kali Linux
-- [Live](https://archive.kali.org/kali-images/current/kali-linux-2024.2-live-amd64.iso)
-- [Installer (Purple)](https://archive.kali.org/kali-images/current/kali-linux-2024.2-installer-purple-amd64.iso)
-- [Installer (Netinst)](https://archive.kali.org/kali-images/current/kali-linux-2024.2-installer-netinst-amd64.iso)
-- [Installer](https://archive.kali.org/kali-images/current/kali-linux-2024.2-installer-amd64.iso)
+- [Live](https://archive.kali.org/kali-images/current/kali-linux-2025.3-live-amd64.iso)
+- [Installer (Purple)](https://archive.kali.org/kali-images/current/kali-linux-2025.3-installer-purple-amd64.iso)
+- [Installer (Netinst)](https://archive.kali.org/kali-images/current/kali-linux-2025.3-installer-netinst-amd64.iso)
+- [Installer](https://archive.kali.org/kali-images/current/kali-linux-2025.3-installer-amd64.iso)
 
 ## Tails
 - [Tails 6.4](https://iso-history.tails.boum.org/tails-amd64-6.4/tails-amd64-6.4.iso)
@@ -155,91 +71,45 @@
 
 ## Ubuntu
 
-### Kubuntu 25.04
+### Kubuntu 25.04 LTS
 - [kubuntu-25.04-desktop-amd64.iso](https://cdimage.ubuntu.com/kubuntu/releases/25.04/release/kubuntu-25.04-desktop-amd64.iso)
 
-### Lubuntu 25.04
+### Lubuntu 25.04 LTS
 - [lubuntu-25.04-desktop-amd64.iso](https://cdimage.ubuntu.com/lubuntu/releases/25.04/release/lubuntu-25.04-desktop-amd64.iso)
 
-### Ubuntu 25.04
+### Ubuntu 25.04 LTS
 - [ubuntu-25.04-desktop-amd64.iso](https://releases.ubuntu.com/25.04/ubuntu-25.04-desktop-amd64.iso)
 
-### Ubuntu Budgie 25.04
+### Ubuntu Budgie 25.04 LTS
 - [ubuntu-budgie-25.04-desktop-amd64.iso](https://cdimage.ubuntu.com/ubuntu-budgie/releases/25.04/release/ubuntu-budgie-25.04-desktop-amd64.iso)
 
-### Ubuntu MATE 25.04
+### Ubuntu MATE 25.04 LTS
 - [ubuntu-mate-25.04-desktop-amd64.iso](https://cdimage.ubuntu.com/ubuntu-mate/releases/25.04/release/ubuntu-mate-25.04-desktop-amd64.iso)
 
-### Xubuntu 25.04
+### Xubuntu 25.04 LTS
 - [xubuntu-25.04-desktop-amd64.iso](https://cdimage.ubuntu.com/xubuntu/releases/25.04/release/xubuntu-25.04-desktop-amd64.iso)
 
+### Kubuntu 25.10
+- [kubuntu-25.10-desktop-amd64.iso](https://cdimage.ubuntu.com/kubuntu/releases/25.10/release/kubuntu-25.10-desktop-amd64.iso)
 
-### Lubuntu 25.04
-- [lubuntu-25.04-desktop-amd64.iso](https://cdimage.ubuntu.com/lubuntu/releases/25.04/release/lubuntu-25.04-desktop-amd64.iso)
+### Lubuntu 25.10
+- [lubuntu-25.10-desktop-amd64.iso](https://cdimage.ubuntu.com/lubuntu/releases/25.10/release/lubuntu-25.10-desktop-amd64.iso)
 
-### Ubuntu 25.04
-- [ubuntu-25.04-desktop-amd64.iso](https://releases.ubuntu.com/25.04/ubuntu-25.04-desktop-amd64.iso)
+### Ubuntu 25.10
+- [ubuntu-25.10-desktop-amd64.iso](https://releases.ubuntu.com/25.10/ubuntu-25.10-desktop-amd64.iso)
 
-### Ubuntu Budgie 25.04
-- [ubuntu-budgie-25.04-desktop-amd64.iso](https://cdimage.ubuntu.com/ubuntu-budgie/releases/25.04/release/ubuntu-budgie-25.04-desktop-amd64.iso)
+### Ubuntu Budgie 25.10
+- [ubuntu-budgie-25.10-desktop-amd64.iso](https://cdimage.ubuntu.com/ubuntu-budgie/releases/25.10/release/ubuntu-budgie-25.10-desktop-amd64.iso)
 
-### Ubuntu MATE 25.04
-- [ubuntu-mate-25.04-desktop-amd64.iso](https://cdimage.ubuntu.com/ubuntu-mate/releases/25.04/release/ubuntu-mate-25.04-desktop-amd64.iso)
+### Ubuntu MATE 25.10
+- [ubuntu-mate-25.10-desktop-amd64.iso](https://cdimage.ubuntu.com/ubuntu-mate/releases/25.10/release/ubuntu-mate-25.10-desktop-amd64.iso)
 
-### Xubuntu 25.04
-- [xubuntu-25.04-desktop-amd64.iso](https://cdimage.ubuntu.com/xubuntu/releases/25.04/release/xubuntu-25.04-desktop-amd64.iso)
-
-
-### Lubuntu 25.04
-- [lubuntu-25.04-desktop-amd64.iso](https://cdimage.ubuntu.com/lubuntu/releases/25.04/release/lubuntu-25.04-desktop-amd64.iso)
-
-### Ubuntu 25.04
-- [ubuntu-25.04-desktop-amd64.iso](https://releases.ubuntu.com/25.04/ubuntu-25.04-desktop-amd64.iso)
-
-### Ubuntu Budgie 25.04
-- [ubuntu-budgie-25.04-desktop-amd64.iso](https://cdimage.ubuntu.com/ubuntu-budgie/releases/25.04/release/ubuntu-budgie-25.04-desktop-amd64.iso)
-
-### Ubuntu MATE 25.04
-- [ubuntu-mate-25.04-desktop-amd64.iso](https://cdimage.ubuntu.com/ubuntu-mate/releases/25.04/release/ubuntu-mate-25.04-desktop-amd64.iso)
-
-### Xubuntu 25.04
-- [xubuntu-25.04-desktop-amd64.iso](https://cdimage.ubuntu.com/xubuntu/releases/25.04/release/xubuntu-25.04-desktop-amd64.iso)
-
-
-### Lubuntu 25.04
-- [lubuntu-25.04-desktop-amd64.iso](https://cdimage.ubuntu.com/lubuntu/releases/25.04/release/lubuntu-25.04-desktop-amd64.iso)
-
-### Ubuntu 25.04
-- [ubuntu-25.04-desktop-amd64.iso](https://releases.ubuntu.com/25.04/ubuntu-25.04-desktop-amd64.iso)
-
-### Ubuntu Budgie 25.04
-- [ubuntu-budgie-25.04-desktop-amd64.iso](https://cdimage.ubuntu.com/ubuntu-budgie/releases/25.04/release/ubuntu-budgie-25.04-desktop-amd64.iso)
-
-### Ubuntu MATE 25.04
-- [ubuntu-mate-25.04-desktop-amd64.iso](https://cdimage.ubuntu.com/ubuntu-mate/releases/25.04/release/ubuntu-mate-25.04-desktop-amd64.iso)
-
-### Xubuntu 25.04
-- [xubuntu-25.04-desktop-amd64.iso](https://cdimage.ubuntu.com/xubuntu/releases/25.04/release/xubuntu-25.04-desktop-amd64.iso)
-
-
-### Lubuntu 25.04
-- [lubuntu-25.04-desktop-amd64.iso](https://cdimage.ubuntu.com/lubuntu/releases/25.04/release/lubuntu-25.04-desktop-amd64.iso)
-
-### Ubuntu 25.04
-- [ubuntu-25.04-desktop-amd64.iso](https://releases.ubuntu.com/25.04/ubuntu-25.04-desktop-amd64.iso)
-
-### Ubuntu Budgie 25.04
-- [ubuntu-budgie-25.04-desktop-amd64.iso](https://cdimage.ubuntu.com/ubuntu-budgie/releases/25.04/release/ubuntu-budgie-25.04-desktop-amd64.iso)
-
-### Ubuntu MATE 25.04
-- [ubuntu-mate-25.04-desktop-amd64.iso](https://cdimage.ubuntu.com/ubuntu-mate/releases/25.04/release/ubuntu-mate-25.04-desktop-amd64.iso)
-
-### Xubuntu 25.04
-- [xubuntu-25.04-desktop-amd64.iso](https://cdimage.ubuntu.com/xubuntu/releases/25.04/release/xubuntu-25.04-desktop-amd64.iso)
+### Xubuntu 25.10
+- [xubuntu-25.10-desktop-amd64.iso](https://cdimage.ubuntu.com/xubuntu/releases/25.10/release/xubuntu-25.10-desktop-amd64.iso)
 
 
 ## Arch Linux
-- [Arch Linux 2024.08.01](https://geo.mirror.pkgbuild.com/iso/2024.08.01/archlinux-2024.08.01-x86_64.iso)
+- [Arch Linux 2025.12.01](https://geo.mirror.pkgbuild.com/iso/2025.12.01/archlinux-2025.12.01-x86_64.iso)
 
 ## Manjaro
 - [Xfce 23.0](https://download.manjaro.org/xfce/23.0/manjaro-xfce-23.0-230701-linux61.iso)
@@ -247,25 +117,21 @@
 - [GNOME 23.0](https://download.manjaro.org/gnome/23.0/manjaro-gnome-23.0-230701-linux61.iso)
 
 ## Linux Mint
-- [Cinnamon 21.1](https://mirrors.edge.kernel.org/linuxmint/stable/21.1/linuxmint-21.1-cinnamon-64bit.iso)
-- [Mate 21.1](https://mirrors.edge.kernel.org/linuxmint/stable/21.1/linuxmint-21.1-mate-64bit.iso)
-- [Xfce 21.1](https://mirrors.edge.kernel.org/linuxmint/stable/21.1/linuxmint-21.1-xfce-64bit.iso)
+- [Cinnamon 22.2](https://mirrors.edge.kernel.org/linuxmint/stable/22.2/linuxmint-22.2-cinnamon-64bit.iso)
+- [Mate 22.2](https://mirrors.edge.kernel.org/linuxmint/stable/22.2/linuxmint-22.2-mate-64bit.iso)
+- [Xfce 22.2](https://mirrors.edge.kernel.org/linuxmint/stable/22.2/linuxmint-22.2-xfce-64bit.iso)
 
 ## Zorin OS
 - [Core 16.3](https://sourceforge.net/projects/zorin-os/files/16/Zorin-OS-16.3-Core-64-bit.iso)
 - [Lite 16.3](https://sourceforge.net/projects/zorin-os/files/16/Zorin-OS-16.3-Lite-64-bit.iso)
 
 ## Pop!_OS
-- [Pop!_OS 22.04](https://pop-iso.sfo2.cdn.digitaloceanspaces.com/22.04/amd64/intel/5/pop-os_22.04_amd64_intel_5.iso)
+- [Pop!_OS 24.04](https://pop-iso.sfo2.cdn.digitaloceanspaces.com/24.04/amd64/intel/5/pop-os_24.04_amd64_intel_5.iso)
 
 ## openSUSE
 
 ### openSUSE Leap 16.0
 - [openSUSE-Leap-16.0-DVD-x86_64-Media.iso](https://download.opensuse.org/distribution/leap/16.0/iso/openSUSE-Leap-16.0-DVD-x86_64-Media.iso)
-
-### openSUSE Tumbleweed
-- [openSUSE-Tumbleweed-DVD-x86_64-Current.iso](https://download.opensuse.org/tumbleweed/iso/openSUSE-Tumbleweed-DVD-x86_64-Current.iso)
-
 
 ### openSUSE Tumbleweed
 - [openSUSE-Tumbleweed-DVD-x86_64-Current.iso](https://download.opensuse.org/tumbleweed/iso/openSUSE-Tumbleweed-DVD-x86_64-Current.iso)
