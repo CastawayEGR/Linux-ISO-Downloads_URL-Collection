@@ -71,7 +71,6 @@
 - [Ubuntu 25.04 Desktop](https://releases.ubuntu.com/25.04/ubuntu-25.04-desktop-amd64.iso)
 
 
-
 ## Arch Linux
 - [Arch Linux 2024.08.01](https://geo.mirror.pkgbuild.com/iso/2024.08.01/archlinux-2024.08.01-x86_64.iso)
 
