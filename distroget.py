@@ -5,6 +5,8 @@ import os
 import requests
 import sys
 import threading
+import queue
+import time
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -184,7 +186,8 @@ class FedoraUpdater(DistroUpdater):
         import re
         
         # Find any existing Fedora section (Fedora or Fedora Workstation)
-        pattern = r'## Fedora(?:\s+Workstation)?\s*\n(.*?)(?=\n##|\Z)'
+        # Match only top-level ## sections (not ### subsections)
+        pattern = r'## Fedora(?:\s+Workstation)?\s*\n(.*?)(?=\n## [^#]|\Z)'
         
         if structure:
             new_section = "## Fedora\n\n"
@@ -227,10 +230,10 @@ class DebianUpdater(DistroUpdater):
     
     @staticmethod
     def get_latest_version():
-        """Get latest Debian stable version."""
+        """Get latest Debian stable and testing versions."""
         try:
             import re
-            # The current-live directory contains the latest stable release
+            # Get stable version
             r = requests.get('https://cdimage.debian.org/debian-cd/current-live/amd64/iso-hybrid/', timeout=10)
             r.raise_for_status()
             
@@ -238,76 +241,106 @@ class DebianUpdater(DistroUpdater):
             match = re.search(r'debian-live-(\d+\.\d+(?:\.\d+)?)-amd64', r.text)
             if match:
                 full_version = match.group(1)
-                # Return major version
-                return full_version.split('.')[0]
+                stable = full_version.split('.')[0]
+                # Return both stable and testing
+                return {'stable': stable, 'testing': 'testing'}
         except Exception as e:
             print(f"    Error fetching Debian version: {e}")
         
         return None
     
     @staticmethod
-    def generate_download_links(version):
+    def generate_download_links(versions):
         """Generate hierarchical Debian structure with all desktop environments."""
         import re
         
+        if not versions or not isinstance(versions, dict):
+            return {}
+        
         structure = {}
-        base_url = "https://cdimage.debian.org/debian-cd/current-live/amd64/iso-hybrid"
         
-        try:
-            r = requests.get(base_url + "/", timeout=10)
-            r.raise_for_status()
-            
-            # Find all live ISO files
-            iso_pattern = re.compile(r'href="(debian-live-[^"]+\.iso)"')
-            matches = set(iso_pattern.findall(r.text))
-            
-            # Categorize by desktop environment
-            for iso in sorted(matches):
-                iso_lower = iso.lower()
-                de_name = None
-                
-                if 'cinnamon' in iso_lower:
-                    de_name = 'Cinnamon'
-                elif 'gnome' in iso_lower:
-                    de_name = 'GNOME'
-                elif 'kde' in iso_lower:
-                    de_name = 'KDE Plasma'
-                elif 'xfce' in iso_lower:
-                    de_name = 'Xfce'
-                elif 'lxde' in iso_lower:
-                    de_name = 'LXDE'
-                elif 'lxqt' in iso_lower:
-                    de_name = 'LXQt'
-                elif 'mate' in iso_lower:
-                    de_name = 'MATE'
-                
-                if de_name:
-                    if de_name not in structure:
-                        structure[de_name] = []
-                    structure[de_name].append(f"{base_url}/{iso}")
+        # Define branches to fetch
+        branches = []
+        if 'stable' in versions:
+            branches.append(('stable', 'current-live', versions['stable']))
+        if 'testing' in versions:
+            branches.append(('testing', 'weekly-live-builds', 'testing'))
         
-        except Exception as e:
-            print(f"    Error fetching Debian ISOs: {e}")
+        for branch_name, path, version_label in branches:
+            base_url = f"https://cdimage.debian.org/debian-cd/{path}/amd64/iso-hybrid"
+            
+            try:
+                r = requests.get(base_url + "/", timeout=10)
+                r.raise_for_status()
+                
+                # Find all live ISO files
+                iso_pattern = re.compile(r'href="(debian-live-[^"]+\.iso)"')
+                matches = set(iso_pattern.findall(r.text))
+                
+                # Categorize by desktop environment
+                for iso in sorted(matches):
+                    iso_lower = iso.lower()
+                    de_name = None
+                    
+                    if 'cinnamon' in iso_lower:
+                        de_name = 'Cinnamon'
+                    elif 'gnome' in iso_lower:
+                        de_name = 'GNOME'
+                    elif 'kde' in iso_lower:
+                        de_name = 'KDE Plasma'
+                    elif 'xfce' in iso_lower:
+                        de_name = 'Xfce'
+                    elif 'lxde' in iso_lower:
+                        de_name = 'LXDE'
+                    elif 'lxqt' in iso_lower:
+                        de_name = 'LXQt'
+                    elif 'mate' in iso_lower:
+                        de_name = 'MATE'
+                    
+                    if de_name:
+                        key = f"{branch_name}_{de_name}"
+                        if key not in structure:
+                            structure[key] = {'version': version_label, 'name': de_name, 'branch': branch_name, 'urls': []}
+                        structure[key]['urls'].append(f"{base_url}/{iso}")
+            
+            except Exception as e:
+                print(f"    Error fetching Debian {branch_name} ISOs: {e}")
         
         return structure
     
     @staticmethod
-    def update_section(content, version, structure):
+    def update_section(content, versions, structure):
         """Update Debian section with hierarchical desktop environments."""
         import re
         
-        pattern = r'## Debian\s*\n(.*?)(?=\n##|\Z)'
+        pattern = r'## Debian\s*\n(.*?)(?=\n## [^#]|\Z)'
         
         if structure:
-            new_section = f"## Debian\n\n"
+            new_section = "## Debian\n\n"
             
-            # Add each desktop environment as a subsection
-            for de_name in sorted(structure.keys()):
-                new_section += f"### Debian {version} {de_name}\n"
-                for url in structure[de_name]:
-                    filename = url.split('/')[-1]
-                    new_section += f"- [{filename}]({url})\n"
-                new_section += "\n"
+            # Group by branch (stable, testing)
+            by_branch = {}
+            for key, data in structure.items():
+                branch = data['branch']
+                if branch not in by_branch:
+                    by_branch[branch] = []
+                by_branch[branch].append(data)
+            
+            # Add stable first, then testing
+            for branch in ['stable', 'testing']:
+                if branch not in by_branch:
+                    continue
+                    
+                items = sorted(by_branch[branch], key=lambda x: x['name'])
+                for item in items:
+                    version_label = item['version']
+                    de_name = item['name']
+                    branch_label = branch.capitalize()
+                    new_section += f"### Debian {version_label} {de_name} ({branch_label})\n"
+                    for url in item['urls']:
+                        filename = url.split('/')[-1]
+                        new_section += f"- [{filename}]({url})\n"
+                    new_section += "\n"
             
             if re.search(pattern, content, re.DOTALL):
                 content = re.sub(pattern, new_section, content, flags=re.DOTALL)
@@ -321,7 +354,7 @@ class UbuntuUpdater(DistroUpdater):
     
     @staticmethod
     def get_latest_version():
-        """Get latest Ubuntu LTS version."""
+        """Get latest Ubuntu LTS and latest versions."""
         try:
             import re
             r = requests.get('https://releases.ubuntu.com/', timeout=10)
@@ -330,65 +363,94 @@ class UbuntuUpdater(DistroUpdater):
             # Find all version directories
             versions = re.findall(r'href="(\d+\.\d+)/"', r.text)
             if versions:
+                # Sort all versions
+                sorted_versions = sorted(versions, key=lambda x: tuple(map(int, x.split('.'))))
+                latest = sorted_versions[-1] if sorted_versions else None
+                
                 # Filter for LTS versions (.04)
                 lts_versions = [v for v in versions if v.endswith('.04')]
                 if lts_versions:
                     lts_versions.sort(key=lambda x: tuple(map(int, x.split('.'))))
-                    return lts_versions[-1]
+                    lts = lts_versions[-1]
+                    # Return both if different, otherwise just latest
+                    if latest and latest != lts:
+                        return {'lts': lts, 'latest': latest}
+                    else:
+                        return {'lts': lts}
         except Exception as e:
             print(f"    Error fetching Ubuntu version: {e}")
         
         return None
     
     @staticmethod
-    def generate_download_links(version):
+    def generate_download_links(versions):
         """Generate hierarchical Ubuntu structure with all flavors."""
-        if not version:
+        if not versions or not isinstance(versions, dict):
             return {}
         
         import re
         structure = {}
         
-        # Define Ubuntu flavors and their base URLs
-        flavors = {
-            'Ubuntu': f'https://releases.ubuntu.com/{version}/',
-            'Kubuntu': f'https://cdimage.ubuntu.com/kubuntu/releases/{version}/release/',
-            'Xubuntu': f'https://cdimage.ubuntu.com/xubuntu/releases/{version}/release/',
-            'Lubuntu': f'https://cdimage.ubuntu.com/lubuntu/releases/{version}/release/',
-            'Ubuntu MATE': f'https://cdimage.ubuntu.com/ubuntu-mate/releases/{version}/release/',
-            'Ubuntu Budgie': f'https://cdimage.ubuntu.com/ubuntu-budgie/releases/{version}/release/',
-        }
-        
-        for flavor, url in flavors.items():
-            try:
-                r = requests.get(url, timeout=10)
-                if r.status_code == 200:
-                    # Find desktop ISO
-                    iso_pattern = re.compile(r'href="([^"]*desktop-amd64\.iso)"')
-                    matches = iso_pattern.findall(r.text)
-                    if matches:
-                        structure[flavor] = [f"{url}{matches[0]}"]
-            except Exception:
-                pass
+        # Process each version type
+        for version_type, version in versions.items():
+            # Define Ubuntu flavors and their base URLs
+            flavors = {
+                'Ubuntu': f'https://releases.ubuntu.com/{version}/',
+                'Kubuntu': f'https://cdimage.ubuntu.com/kubuntu/releases/{version}/release/',
+                'Xubuntu': f'https://cdimage.ubuntu.com/xubuntu/releases/{version}/release/',
+                'Lubuntu': f'https://cdimage.ubuntu.com/lubuntu/releases/{version}/release/',
+                'Ubuntu MATE': f'https://cdimage.ubuntu.com/ubuntu-mate/releases/{version}/release/',
+                'Ubuntu Budgie': f'https://cdimage.ubuntu.com/ubuntu-budgie/releases/{version}/release/',
+            }
+            
+            for flavor, url in flavors.items():
+                try:
+                    r = requests.get(url, timeout=10)
+                    if r.status_code == 200:
+                        # Find desktop ISO
+                        iso_pattern = re.compile(r'href="([^"]*desktop-amd64\.iso)"')
+                        matches = iso_pattern.findall(r.text)
+                        if matches:
+                            key = f"{version_type}_{flavor}"
+                            structure[key] = {'version': version, 'flavor': flavor, 'type': version_type, 'urls': [f"{url}{matches[0]}"]}
+                except Exception:
+                    pass
         
         return structure
     
     @staticmethod
-    def update_section(content, version, structure):
+    def update_section(content, versions, structure):
         """Update Ubuntu section with hierarchical flavors."""
         import re
         
-        pattern = r'## Ubuntu\s*\n(.*?)(?=\n##|\Z)'
+        pattern = r'## Ubuntu\s*\n(.*?)(?=\n## [^#]|\Z)'
         
         if structure:
             new_section = "## Ubuntu\n\n"
             
-            for flavor in sorted(structure.keys()):
-                new_section += f"### {flavor} {version}\n"
-                for url in structure[flavor]:
-                    filename = url.split('/')[-1]
-                    new_section += f"- [{filename}]({url})\n"
-                new_section += "\n"
+            # Group by version type (LTS, latest)
+            by_type = {}
+            for key, data in structure.items():
+                version_type = data['type']
+                if version_type not in by_type:
+                    by_type[version_type] = []
+                by_type[version_type].append(data)
+            
+            # Add LTS first, then latest
+            for version_type in ['lts', 'latest']:
+                if version_type not in by_type:
+                    continue
+                    
+                items = sorted(by_type[version_type], key=lambda x: x['flavor'])
+                for item in items:
+                    version = item['version']
+                    flavor = item['flavor']
+                    type_label = 'LTS' if version_type == 'lts' else ''
+                    new_section += f"### {flavor} {version} {type_label}\n".strip() + "\n"
+                    for url in item['urls']:
+                        filename = url.split('/')[-1]
+                        new_section += f"- [{filename}]({url})\n"
+                    new_section += "\n"
             
             if re.search(pattern, content, re.DOTALL):
                 content = re.sub(pattern, new_section, content, flags=re.DOTALL)
@@ -450,7 +512,7 @@ class OpenSUSEUpdater(DistroUpdater):
         """Update openSUSE section."""
         import re
         
-        pattern = r'## openSUSE\s*\n(.*?)(?=\n##|\Z)'
+        pattern = r'## openSUSE\s*\n(.*?)(?=\n## [^#]|\Z)'
         
         if structure:
             new_section = "## openSUSE\n\n"
@@ -600,6 +662,132 @@ def update_repository():
         print(f"You may need to set up authentication or check the repository at {temp_dir}")
     except Exception as e:
         print(f"Error updating repository: {e}")
+
+class DownloadManager:
+    """Manages parallel downloads in background threads."""
+    def __init__(self, target_dir, is_remote=False, remote_host=None, remote_path=None, max_workers=3):
+        self.target_dir = target_dir
+        self.is_remote = is_remote
+        self.remote_host = remote_host
+        self.remote_path = remote_path
+        self.max_workers = max_workers
+        self.download_queue = queue.Queue()
+        self.active_downloads = {}
+        self.completed = set()
+        self.completed_urls = set()
+        self.failed = set()
+        self.retry_counts = {}  # Track retry attempts per URL
+        self.max_retries = 3
+        self.lock = threading.Lock()
+        self.workers = []
+        self.running = True
+        
+    def start(self):
+        """Start download worker threads."""
+        for i in range(self.max_workers):
+            worker = threading.Thread(target=self._worker, daemon=True)
+            worker.start()
+            self.workers.append(worker)
+    
+    def _worker(self):
+        """Worker thread that processes downloads."""
+        while self.running:
+            try:
+                url = self.download_queue.get(timeout=0.5)
+            except queue.Empty:
+                continue
+            
+            filename = url.split('/')[-1]
+            with self.lock:
+                self.active_downloads[url] = {'filename': filename, 'progress': 0, 'total': 0}
+            
+            try:
+                self._download_file(url, filename)
+                with self.lock:
+                    self.completed.add(url)
+                    self.completed_urls.add(url)
+                    if url in self.active_downloads:
+                        del self.active_downloads[url]
+                    # Clear retry count on success
+                    if url in self.retry_counts:
+                        del self.retry_counts[url]
+            except Exception as e:
+                with self.lock:
+                    # Get current retry count
+                    retry_count = self.retry_counts.get(url, 0)
+                    
+                    if retry_count < self.max_retries:
+                        # Retry the download
+                        self.retry_counts[url] = retry_count + 1
+                        # Re-queue with delay (exponential backoff)
+                        import time
+                        time.sleep(2 ** retry_count)  # 1s, 2s, 4s delays
+                        self.download_queue.put(url)
+                    else:
+                        # Max retries exceeded
+                        self.failed.add(url)
+                    
+                    if url in self.active_downloads:
+                        del self.active_downloads[url]
+            finally:
+                self.download_queue.task_done()
+    
+    def _download_file(self, url, filename):
+        """Download a single file."""
+        import tempfile
+        import subprocess
+        
+        if self.is_remote:
+            temp_dir = tempfile.gettempdir()
+            local_path = os.path.join(temp_dir, filename)
+        else:
+            local_path = os.path.join(self.target_dir, filename)
+            if os.path.exists(local_path):
+                return  # Skip existing files
+        
+        # Download the file
+        r = requests.get(url, stream=True, timeout=30)
+        r.raise_for_status()
+        total = int(r.headers.get('content-length', 0))
+        
+        with open(local_path, 'wb') as f:
+            downloaded = 0
+            for chunk in r.iter_content(chunk_size=8192):
+                if chunk:
+                    f.write(chunk)
+                    downloaded += len(chunk)
+                    with self.lock:
+                        if url in self.active_downloads:
+                            self.active_downloads[url]['progress'] = downloaded
+                            self.active_downloads[url]['total'] = total
+        
+        # If remote, scp the file
+        if self.is_remote:
+            remote_file = f"{self.remote_host}:{self.remote_path}/{filename}"
+            subprocess.run(['scp', local_path, remote_file], capture_output=True, text=True, check=False)
+            os.remove(local_path)
+    
+    def add_download(self, url):
+        """Add a URL to the download queue."""
+        self.download_queue.put(url)
+    
+    def get_status(self):
+        """Get current download status."""
+        with self.lock:
+            return {
+                'active': dict(self.active_downloads),
+                'completed': len(self.completed),
+                'completed_urls': set(self.completed_urls),
+                'failed': len(self.failed),
+                'retry_counts': dict(self.retry_counts),
+                'queued': self.download_queue.qsize()
+            }
+    
+    def stop(self):
+        """Stop all workers."""
+        self.running = False
+        for worker in self.workers:
+            worker.join(timeout=1)
 
 def download_iso(url, target_dir, is_remote=False, remote_host=None, remote_path=None):
     filename = os.path.basename(urlparse(url).path)
@@ -799,12 +987,50 @@ def fetch_iso_list():
         traceback.print_exc()
         sys.exit(1)
 
+def extract_urls_from_node(node):
+    """Recursively extract all URLs from a node."""
+    urls = []
+    if isinstance(node, list):
+        # List of items - extract URLs
+        for entry in node:
+            if ": " in entry:
+                url = entry.split(": ", 1)[1]
+                urls.append(url)
+    elif isinstance(node, dict):
+        # Dictionary - recurse into children
+        for key, value in node.items():
+            if key != "_items":  # Skip special _items key
+                urls.extend(extract_urls_from_node(value))
+        # Also check _items
+        if "_items" in node:
+            urls.extend(extract_urls_from_node(node["_items"]))
+    return urls
+
+def extract_urls_for_path(distro_dict, item_path):
+    """Extract URLs for a specific item path."""
+    path_parts = item_path.split('/')
+    current_node = distro_dict
+    
+    for part in path_parts:
+        if isinstance(current_node, dict):
+            if part in current_node:
+                current_node = current_node[part]
+            else:
+                return []
+        else:
+            return []
+    
+    return extract_urls_from_node(current_node)
+
 # Curses menu
 def curses_menu(stdscr, distro_dict):
     import time
     
     curses.curs_set(0)
     curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_CYAN)
+    curses.init_pair(2, curses.COLOR_GREEN, curses.COLOR_BLACK)
+    curses.init_pair(3, curses.COLOR_YELLOW, curses.COLOR_BLACK)
+    curses.init_pair(4, curses.COLOR_RED, curses.COLOR_BLACK)
     current_row = 0
     scroll_offset = 0
     path_stack = []
@@ -817,6 +1043,8 @@ def curses_menu(stdscr, distro_dict):
     last_key_time = 0
     search_timeout = 3.0  # seconds
     needs_redraw = True  # Track when screen needs redrawing
+    download_manager = None  # Will be initialized when target_directory is set
+    downloaded_items = set()  # Track which items have been queued for download
 
     while True:
         current_menu = menu_stack[-1]
@@ -835,36 +1063,62 @@ def curses_menu(stdscr, distro_dict):
             stdscr.clear()
             needs_redraw = False
         
-        # Calculate visible area
-        header_lines = 3
-        visible_lines = height - header_lines - 1  # Leave space for header and bottom
+        # Calculate split screen dimensions
+        left_width = int(width * 0.6)
+        right_width = width - left_width - 1
         
         # Count selected ISOs (leaf nodes only)
         iso_count = sum(1 for path in selected_items if '/' in path and not any(other.startswith(path + '/') for other in selected_items))
         
-        # Header line with hint about search
+        # Draw header
         dest_info = f" | Dest: {target_directory}" if target_directory else ""
-        header = f"Navigate: ↑↓, Select: SPACE, Enter/→: Enter, ←/ESC: Back, /: Search, A: All, D: Set Dir, Q: Quit | Selected: {iso_count}{dest_info}"
+        header = f"Navigate: ↑↓, Select: SPACE, Enter/→: Enter, ←/ESC: Back, /: Search, A: All, D: Set Dir, Q: Quit"
         stdscr.addstr(0, 0, header[:width-1])
         
-        path_display = f"Path: {'/'.join(path_stack) if path_stack else 'root'}"
+        # Draw path/search line
+        path_display = f"Path: {'/'.join(path_stack) if path_stack else 'root'} | Selected: {iso_count}{dest_info}"
         if search_mode and search_buffer:
             path_display += f" | Search: {search_buffer}"
         elif search_mode:
             path_display += " | Search: _"
         stdscr.addstr(1, 0, path_display[:width-1])
         
+        # Draw left box border (menu)
+        for y in range(2, height):
+            stdscr.addch(y, left_width, '│')
+        stdscr.addstr(2, 0, '┌' + '─' * (left_width - 1) + '┤')
+        stdscr.addstr(2, 1, ' ISO Selection ')
+        if height > 2:
+            stdscr.addstr(height - 1, 0, '└' + '─' * (left_width - 1) + '┴')
+        
+        # Draw right box border (downloads)
+        stdscr.addstr(2, left_width + 1, '┌' + '─' * (right_width - 3) + '┐')
+        stdscr.addstr(2, left_width + 2, ' Downloads ')
+        # Don't draw to the last character position to avoid curses error
+        if height > 2 and width > left_width + 1:
+            bottom_line = '└' + '─' * (right_width - 3) + '┘'
+            # Don't write the last character if it's at the screen edge
+            if left_width + 1 + len(bottom_line) >= width:
+                bottom_line = bottom_line[:-1]
+            stdscr.addstr(height - 1, left_width + 1, bottom_line)
+        for y in range(3, height - 1):
+            if width > 1:
+                stdscr.addch(y, width - 1, '│')
+        
+        # Calculate visible area for left panel
+        menu_height = height - 4  # Space for borders
+        
         if not current_menu:
-            stdscr.addstr(3, 0, "No items available. Press Q to quit or Enter to go back."[:width-1])
+            stdscr.addstr(3, 1, "No items available."[:left_width-2])
         else:
             # Adjust scroll offset to keep current row visible
             if current_row < scroll_offset:
                 scroll_offset = current_row
-            elif current_row >= scroll_offset + visible_lines:
-                scroll_offset = current_row - visible_lines + 1
+            elif current_row >= scroll_offset + menu_height:
+                scroll_offset = current_row - menu_height + 1
             
-            # Display visible items
-            for idx in range(scroll_offset, min(scroll_offset + visible_lines, len(current_menu))):
+            # Display visible items in left panel
+            for idx in range(scroll_offset, min(scroll_offset + menu_height, len(current_menu))):
                 item = current_menu[idx]
                 item_path = "/".join(path_stack + [item])
                 
@@ -878,21 +1132,123 @@ def curses_menu(stdscr, distro_dict):
                 else:
                     prefix = "[ ]"
                 
-                display_line = f"{prefix} {item}"[:width-1]
-                screen_row = idx - scroll_offset + header_lines
+                display_line = f"{prefix} {item}"[:left_width-2]
+                screen_row = idx - scroll_offset + 3
                 
                 if idx == current_row:
                     stdscr.attron(curses.color_pair(1))
-                    stdscr.addstr(screen_row, 0, display_line)
+                    stdscr.addstr(screen_row, 1, display_line + ' ' * (left_width - 2 - len(display_line)))
                     stdscr.attroff(curses.color_pair(1))
                 else:
-                    stdscr.addstr(screen_row, 0, display_line)
+                    stdscr.addstr(screen_row, 1, display_line)
+        
+        # Draw download status in right panel
+        download_y = 3
+        if download_manager:
+            status = download_manager.get_status()
+            
+            # Summary line
+            summary = f"Total: {iso_count} | Done: {status['completed']}"
+            stdscr.addstr(download_y, left_width + 2, summary[:right_width-3])
+            download_y += 1
+            
+            if status['queued'] > 0:
+                queued_line = f"Queued: {status['queued']}"
+                stdscr.addstr(download_y, left_width + 2, queued_line[:right_width-3])
+                download_y += 1
+            
+            if status['failed'] > 0:
+                stdscr.attron(curses.color_pair(4))
+                failed_line = f"Failed: {status['failed']}"
+                stdscr.addstr(download_y, left_width + 2, failed_line[:right_width-3])
+                stdscr.attroff(curses.color_pair(4))
+                download_y += 1
+            
+            download_y += 1
+            
+            # Show active downloads
+            active_items = list(status['active'].items())
+            if active_items:
+                stdscr.addstr(download_y, left_width + 2, "Active downloads:"[:right_width-3])
+                download_y += 1
+                
+                for url, info in active_items[:menu_height - 10]:
+                    filename = info['filename'][:right_width-5]
+                    progress = info['progress']
+                    total = info['total']
+                    
+                    if total > 0:
+                        pct = int(100 * progress / total)
+                        bar_width = min(right_width - 8, 20)
+                        filled = int(bar_width * progress / total)
+                        bar = '█' * filled + '░' * (bar_width - filled)
+                        
+                        stdscr.attron(curses.color_pair(3))
+                        stdscr.addstr(download_y, left_width + 2, filename[:right_width-3])
+                        stdscr.attroff(curses.color_pair(3))
+                        download_y += 1
+                        
+                        progress_line = f"{bar} {pct}%"
+                        stdscr.addstr(download_y, left_width + 2, progress_line[:right_width-3])
+                        download_y += 1
+                    else:
+                        stdscr.attron(curses.color_pair(3))
+                        stdscr.addstr(download_y, left_width + 2, filename[:right_width-3])
+                        stdscr.attroff(curses.color_pair(3))
+                        download_y += 1
+                        stdscr.addstr(download_y, left_width + 2, "Starting..."[:right_width-3])
+                        download_y += 1
+            
+            # Show list of all downloaded/queued items
+            if download_y < height - 3:
+                download_y += 1
+                if downloaded_items:
+                    stdscr.addstr(download_y, left_width + 2, "Download queue:"[:right_width-3])
+                    download_y += 1
+                    
+                    for url in list(downloaded_items)[:menu_height - download_y]:
+                        filename = url.split('/')[-1][:right_width-5]
+                        retry_count = status.get('retry_counts', {}).get(url, 0)
+                        
+                        # Check status
+                        if url in status['active']:
+                            marker = "⬇"
+                            color = 3  # Yellow
+                        elif url in status.get('completed_urls', set()):
+                            marker = "✓"
+                            color = 2  # Green
+                        elif retry_count > 0:
+                            # Show retry attempt with red indicators
+                            marker = "●" * retry_count
+                            color = 4  # Red
+                        else:
+                            marker = "⋯"
+                            color = 0  # Normal
+                        
+                        if color > 0:
+                            stdscr.attron(curses.color_pair(color))
+                        stdscr.addstr(download_y, left_width + 2, f"{marker} {filename}"[:right_width-3])
+                        if color > 0:
+                            stdscr.attroff(curses.color_pair(color))
+                        download_y += 1
+                        
+                        if download_y >= height - 2:
+                            break
+        else:
+            stdscr.addstr(download_y, left_width + 2, "Set target dir (D)"[:right_width-3])
+            download_y += 1
+            stdscr.addstr(download_y, left_width + 2, "to start downloads"[:right_width-3])
         
         stdscr.timeout(100)  # 100ms timeout for getch to allow search timeout checking
         key = stdscr.getch()
         
         if key == -1:  # No key pressed (timeout)
-            needs_redraw = False
+            # Redraw if downloads are active to update progress
+            if download_manager:
+                status = download_manager.get_status()
+                needs_redraw = len(status['active']) > 0
+            else:
+                needs_redraw = False
             continue
         
         needs_redraw = True  # Key was pressed, redraw on next iteration
@@ -958,6 +1314,13 @@ def curses_menu(stdscr, distro_dict):
                 selected_items.remove(item_path)
             else:
                 selected_items.add(item_path)
+                # If download manager is active, queue download immediately
+                if download_manager:
+                    urls = extract_urls_for_path(distro_dict, item_path)
+                    for url in urls:
+                        if url not in downloaded_items:
+                            download_manager.add_download(url)
+                            downloaded_items.add(url)
         elif key in [ord('a'), ord('A')]:
             # Select all items in current menu
             for item in current_menu:
@@ -967,9 +1330,83 @@ def curses_menu(stdscr, distro_dict):
             # Set target directory
             curses.endwin()
             target_directory = input("\nEnter target directory (or hostname:/path for remote): ").strip()
+            
+            # Initialize download manager if directory was set
+            if target_directory and not download_manager:
+                is_remote = ':' in target_directory and not target_directory.startswith('/')
+                
+                if is_remote:
+                    remote_host, remote_path = target_directory.split(':', 1)
+                    
+                    # Test SSH connection
+                    print(f"\nTesting SSH connection to {remote_host}...")
+                    import subprocess
+                    test_result = subprocess.run(
+                        ['ssh', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=5', 
+                         remote_host, 'echo "SSH OK"'], 
+                        capture_output=True, 
+                        text=True,
+                        timeout=10
+                    )
+                    
+                    if test_result.returncode != 0:
+                        print(f"\nSSH connection test failed. This might mean:")
+                        print("  - Password authentication is required")
+                        print("  - SSH keys are not set up")
+                        print("  - Host is unreachable")
+                        print(f"\nError: {test_result.stderr.strip()}")
+                        print("\nFor password-free operation, set up SSH keys:")
+                        print(f"  ssh-copy-id {remote_host}")
+                        print("\nPress Enter to continue anyway or Ctrl+C to cancel...")
+                        try:
+                            input()
+                        except KeyboardInterrupt:
+                            print("\nCancelled.")
+                            stdscr = curses.initscr()
+                            curses.curs_set(0)
+                            curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_CYAN)
+                            curses.init_pair(2, curses.COLOR_GREEN, curses.COLOR_BLACK)
+                            curses.init_pair(3, curses.COLOR_YELLOW, curses.COLOR_BLACK)
+                            curses.init_pair(4, curses.COLOR_RED, curses.COLOR_BLACK)
+                            target_directory = None
+                            continue
+                    else:
+                        print("SSH connection OK!")
+                    
+                    if target_directory:
+                        # Create remote directory
+                        print(f"Creating remote directory {remote_path}...")
+                        mkdir_result = subprocess.run(
+                            ['ssh', remote_host, f'mkdir -p {remote_path}'], 
+                            capture_output=True, 
+                            text=True,
+                            timeout=10
+                        )
+                        if mkdir_result.returncode != 0:
+                            print(f"Warning: Could not create remote directory: {mkdir_result.stderr}")
+                        
+                        download_manager = DownloadManager(None, is_remote=True, remote_host=remote_host, remote_path=remote_path)
+                else:
+                    Path(target_directory).mkdir(parents=True, exist_ok=True)
+                    download_manager = DownloadManager(target_directory)
+                
+                if download_manager:
+                    download_manager.start()
+                    
+                    # Queue any already-selected items for download
+                    for item_path in selected_items:
+                        urls = extract_urls_for_path(distro_dict, item_path)
+                        for url in urls:
+                            if url not in downloaded_items:
+                                download_manager.add_download(url)
+                                downloaded_items.add(url)
+            
             stdscr = curses.initscr()
             curses.curs_set(0)
             curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_CYAN)
+            curses.init_pair(2, curses.COLOR_GREEN, curses.COLOR_BLACK)
+            curses.init_pair(3, curses.COLOR_YELLOW, curses.COLOR_BLACK)
+            curses.init_pair(4, curses.COLOR_RED, curses.COLOR_BLACK)
         elif key in [curses.KEY_ENTER, ord('\n'), curses.KEY_RIGHT, ord('l')]:
             selected = current_menu[current_row]
             
@@ -1068,6 +1505,11 @@ def curses_menu(stdscr, distro_dict):
         # Extract URLs from the final node
         if current_node:
             final_urls.extend(extract_urls_from_node(current_node))
+    
+    # Stop download manager if it was started
+    if download_manager:
+        download_manager.stop()
+    
     return final_urls, target_directory
 
 def main():
@@ -1079,35 +1521,15 @@ def main():
         print("No ISOs selected, exiting.")
         sys.exit(0)
     
-    # Ask for target directory if not set in UI
-    if not target_dir:
-        default_dir = config.get('target_directory', '')
-        prompt = f"Enter target directory (or hostname:/path for remote) [{default_dir}]: " if default_dir else "Enter target directory (or hostname:/path for remote): "
-        target_dir = input(prompt).strip()
-        if not target_dir and default_dir:
-            target_dir = default_dir
+    # If downloads already happened in background, we're done
+    if target_dir:
+        print("Downloads completed in background.")
+        sys.exit(0)
     
-    # Save target directory to config
-    config['target_directory'] = target_dir
-    save_config(config)
-    
-    # Check if target is remote
-    is_remote = ':' in target_dir and not target_dir.startswith('/')
-    if is_remote:
-        remote_host, remote_path = target_dir.split(':', 1)
-        print(f"Downloading {len(selected_urls)} ISOs and transferring to {remote_host}:{remote_path} ...")
-        # Ensure remote directory exists
-        import subprocess
-        subprocess.run(['ssh', remote_host, f'mkdir -p {remote_path}'], check=False)
-        for url in selected_urls:
-            download_iso(url, None, is_remote=True, remote_host=remote_host, remote_path=remote_path)
-    else:
-        Path(target_dir).mkdir(parents=True, exist_ok=True)
-        print(f"Downloading {len(selected_urls)} ISOs to {target_dir} ...")
-        for url in selected_urls:
-            download_iso(url, target_dir)
-    
-    print("All downloads completed.")
+    # Save target directory to config if set
+    if target_dir:
+        config['target_directory'] = target_dir
+        save_config(config)
 
 if __name__ == "__main__":
     # Check for --update-repo flag
