@@ -32,7 +32,11 @@ def load_config():
                 return json.load(f)
         except Exception:
             pass
-    return {}
+    
+    # Return default config if file doesn't exist or is invalid
+    return {
+        'location_history': []
+    }
 
 def save_config(config):
     """Save configuration to file."""
@@ -42,6 +46,158 @@ def save_config(config):
             json.dump(config, f, indent=2)
     except Exception as e:
         print(f"Warning: Could not save config: {e}")
+
+def add_to_location_history(location):
+    """Add a location to history, keeping max 10 recent unique locations."""
+    config = load_config()
+    history = config.get('location_history', [])
+    
+    # Remove if already exists (to move it to front)
+    if location in history:
+        history.remove(location)
+    
+    # Add to front
+    history.insert(0, location)
+    
+    # Keep only last 10
+    config['location_history'] = history[:10]
+    save_config(config)
+
+def show_location_popup(stdscr):
+    """Show a curses popup to select from location history or enter new."""
+    config = load_config()
+    history = config.get('location_history', [])
+    
+    # Build menu items
+    menu_items = ['< Enter new location >']
+    if history:
+        menu_items.extend(history)
+    
+    # Calculate popup dimensions
+    max_y, max_x = stdscr.getmaxyx()
+    height = min(max_y - 4, len(menu_items) + 4)
+    width = min(max_x - 4, max(50, max(len(item) for item in menu_items) + 4))
+    start_y = (max_y - height) // 2
+    start_x = (max_x - width) // 2
+    
+    # Create popup window
+    popup = curses.newwin(height, width, start_y, start_x)
+    popup.keypad(True)
+    
+    current_row = 0
+    scroll_offset = 0
+    
+    while True:
+        popup.clear()
+        popup.border()
+        
+        # Title
+        title = " Select Download Location "
+        title_x = max(1, (width - len(title)) // 2)
+        popup.addstr(0, title_x, title, curses.color_pair(1) | curses.A_BOLD)
+        
+        # Calculate visible items
+        visible_height = height - 4
+        visible_items = menu_items[scroll_offset:scroll_offset + visible_height]
+        
+        # Draw menu items
+        for idx, item in enumerate(visible_items):
+            y = idx + 2
+            actual_idx = scroll_offset + idx
+            
+            # Truncate long items
+            display_item = item[:width - 4]
+            
+            if actual_idx == current_row:
+                popup.addstr(y, 2, display_item, curses.color_pair(1))
+            else:
+                popup.addstr(y, 2, display_item)
+        
+        # Show scroll indicators
+        if scroll_offset > 0:
+            popup.addstr(1, width - 3, "^", curses.color_pair(3))
+        if scroll_offset + visible_height < len(menu_items):
+            popup.addstr(height - 2, width - 3, "v", curses.color_pair(3))
+        
+        # Instructions (shortened to fit)
+        instructions = "Enter:Select ESC:Cancel"
+        if len(instructions) < width - 4:
+            popup.addstr(height - 1, 2, instructions, curses.A_DIM)
+        
+        popup.refresh()
+        
+        key = popup.getch()
+        
+        if key == curses.KEY_UP:
+            if current_row > 0:
+                current_row -= 1
+                if current_row < scroll_offset:
+                    scroll_offset = current_row
+        elif key == curses.KEY_DOWN:
+            if current_row < len(menu_items) - 1:
+                current_row += 1
+                if current_row >= scroll_offset + visible_height:
+                    scroll_offset = current_row - visible_height + 1
+        elif key in [curses.KEY_ENTER, ord('\n')]:
+            if current_row == 0:
+                # Enter new location
+                return None
+            else:
+                # Return selected history item
+                return menu_items[current_row]
+        elif key == 27:  # ESC
+            return False  # Cancelled
+    
+    return None
+
+def show_password_popup(stdscr, prompt="Enter SSH password:"):
+    """Show a curses popup to enter password."""
+    max_y, max_x = stdscr.getmaxyx()
+    height = 7
+    width = min(max_x - 4, 60)
+    start_y = (max_y - height) // 2
+    start_x = (max_x - width) // 2
+    
+    # Create popup window
+    popup = curses.newwin(height, width, start_y, start_x)
+    popup.keypad(True)
+    
+    password = ""
+    
+    while True:
+        popup.clear()
+        popup.border()
+        
+        # Title
+        title = " SSH Authentication "
+        title_x = max(1, (width - len(title)) // 2)
+        popup.addstr(0, title_x, title, curses.color_pair(1) | curses.A_BOLD)
+        
+        # Prompt
+        popup.addstr(2, 2, prompt[:width - 4])
+        
+        # Password field (show asterisks)
+        password_display = "*" * len(password)
+        popup.addstr(3, 2, password_display[:width - 4])
+        
+        # Instructions
+        popup.addstr(5, 2, "Enter:Submit ESC:Cancel", curses.A_DIM)
+        
+        popup.refresh()
+        
+        key = popup.getch()
+        
+        if key in [curses.KEY_ENTER, ord('\n')]:
+            return password
+        elif key == 27:  # ESC
+            return None
+        elif key in [curses.KEY_BACKSPACE, 127, 8]:
+            if password:
+                password = password[:-1]
+        elif 32 <= key <= 126:
+            password += chr(key)
+    
+    return None
 
 def get_repo_url():
     """Get the repository URL based on user preference."""
@@ -284,11 +440,12 @@ def update_repository():
 
 class DownloadManager:
     """Manages parallel downloads in background threads."""
-    def __init__(self, target_dir, is_remote=False, remote_host=None, remote_path=None, max_workers=3):
+    def __init__(self, target_dir, is_remote=False, remote_host=None, remote_path=None, ssh_password=None, max_workers=3):
         self.target_dir = target_dir
         self.is_remote = is_remote
         self.remote_host = remote_host
         self.remote_path = remote_path
+        self.ssh_password = ssh_password
         self.max_workers = max_workers
         self.download_queue = queue.Queue()
         self.active_downloads = {}
@@ -302,6 +459,8 @@ class DownloadManager:
         self.running = True
         self.temp_dir = None
         self.downloaded_files = []  # Track files for bulk transfer
+        self.transfer_status = "pending"  # pending, transferring, completed, failed
+        self.transfer_progress = {}  # Track individual file transfers
         
         # Setup temp directory for remote downloads
         if self.is_remote:
@@ -395,28 +554,62 @@ class DownloadManager:
         
         import subprocess
         
-        print(f"\n\nTransferring {len(self.downloaded_files)} file(s) to {self.remote_host}:{self.remote_path}...")
-        print("You may be prompted for SSH password/passphrase.\n")
+        # Update status
+        with self.lock:
+            self.transfer_status = "transferring"
+        
+        print(f"\n\n{'='*60}")
+        print(f"Transferring {len(self.downloaded_files)} file(s) to {self.remote_host}:{self.remote_path}")
+        print(f"{'='*60}")
+        
+        # Show list of files being transferred
+        for filepath in self.downloaded_files:
+            filename = os.path.basename(filepath)
+            size_mb = os.path.getsize(filepath) / (1024 * 1024)
+            print(f"  • {filename} ({size_mb:.1f} MB)")
+        
+        print(f"\nTransferring files...\n")
         
         # Build scp command with all files
-        # Using -p to preserve timestamps, -C for compression
-        scp_cmd = ['scp', '-p', '-C'] + self.downloaded_files + [f"{self.remote_host}:{self.remote_path}/"]
+        # Using -p to preserve timestamps, -C for compression, -v for verbose
+        if self.ssh_password:
+            scp_cmd = ['sshpass', '-p', self.ssh_password, 'scp', '-p', '-C', '-v'] + \
+                      self.downloaded_files + [f"{self.remote_host}:{self.remote_path}/"]
+        else:
+            scp_cmd = ['scp', '-p', '-C', '-v'] + self.downloaded_files + \
+                      [f"{self.remote_host}:{self.remote_path}/"]
         
         try:
-            # Run with interactive TTY so user can enter password
+            # Run with interactive TTY (or non-interactive with sshpass)
             result = subprocess.run(scp_cmd, check=False)
             
             if result.returncode == 0:
-                print(f"\n✓ Successfully transferred all files to {self.remote_host}")
+                with self.lock:
+                    self.transfer_status = "completed"
+                print(f"\n{'='*60}")
+                print(f"✓ Successfully transferred all files to {self.remote_host}")
+                print(f"{'='*60}\n")
                 # Clean up temp files
                 import shutil
                 shutil.rmtree(self.temp_dir, ignore_errors=True)
                 return True
             else:
-                print(f"\n✗ Transfer failed with exit code {result.returncode}")
-                print(f"Files are still available locally in: {self.temp_dir}")
+                with self.lock:
+                    self.transfer_status = "failed"
+                print(f"\n{'='*60}")
+                print(f"✗ Transfer failed with exit code {result.returncode}")
+                print(f"{'='*60}")
+                print(f"\nFiles are still available locally in: {self.temp_dir}")
+                if self.ssh_password:
+                    print("You can manually transfer them with:")
+                    print(f"  sshpass -p 'YOUR_PASSWORD' scp {self.temp_dir}/* {self.remote_host}:{self.remote_path}/")
+                else:
+                    print("You can manually transfer them with:")
+                    print(f"  scp {self.temp_dir}/* {self.remote_host}:{self.remote_path}/")
                 return False
         except Exception as e:
+            with self.lock:
+                self.transfer_status = "failed"
             print(f"\n✗ Transfer error: {e}")
             print(f"Files are still available locally in: {self.temp_dir}")
             return False
@@ -434,7 +627,11 @@ class DownloadManager:
                 'completed_urls': set(self.completed_urls),
                 'failed': len(self.failed),
                 'retry_counts': dict(self.retry_counts),
-                'queued': self.download_queue.qsize()
+                'queued': self.download_queue.qsize(),
+                'is_remote': self.is_remote,
+                'transfer_status': self.transfer_status,
+                'transfer_progress': dict(self.transfer_progress),
+                'downloaded_files': list(self.downloaded_files)
             }
     
     def stop(self):
@@ -827,15 +1024,87 @@ def curses_menu(stdscr, distro_dict):
         if download_manager:
             status = download_manager.get_status()
             
-            # Summary line
-            summary = f"Total: {iso_count} | Done: {status['completed']}"
-            stdscr.addstr(download_y, left_width + 2, summary[:right_width-3])
-            download_y += 1
-            
-            if status['queued'] > 0:
-                queued_line = f"Queued: {status['queued']}"
-                stdscr.addstr(download_y, left_width + 2, queued_line[:right_width-3])
+            # If remote, split right panel into two sections
+            if status['is_remote']:
+                # Draw separator for downloads section
+                sep_y = 3 + (height - 6) // 2
+                stdscr.addstr(sep_y, left_width + 1, '├' + '─' * (right_width - 3) + '┤')
+                stdscr.addstr(sep_y, left_width + 2, ' SCP Transfer ')
+                
+                # Downloads section (top half)
+                summary = f"Total: {iso_count} | Done: {status['completed']}"
+                stdscr.addstr(download_y, left_width + 2, summary[:right_width-3])
                 download_y += 1
+                
+                if status['queued'] > 0:
+                    queued_line = f"Queued: {status['queued']}"
+                    stdscr.addstr(download_y, left_width + 2, queued_line[:right_width-3])
+                    download_y += 1
+                
+                # Show active downloads (compact)
+                active_items = list(status['active'].items())
+                if active_items and download_y < sep_y - 1:
+                    for url, info in active_items[:sep_y - download_y - 1]:
+                        filename = info['filename'][:right_width-10]
+                        progress = info['progress']
+                        total = info['total']
+                        
+                        if total > 0:
+                            pct = int(100 * progress / total)
+                            stdscr.attron(curses.color_pair(3))
+                            stdscr.addstr(download_y, left_width + 2, f"⬇ {filename} {pct}%"[:right_width-3])
+                            stdscr.attroff(curses.color_pair(3))
+                        else:
+                            stdscr.attron(curses.color_pair(3))
+                            stdscr.addstr(download_y, left_width + 2, f"⬇ {filename}..."[:right_width-3])
+                            stdscr.attroff(curses.color_pair(3))
+                        download_y += 1
+                
+                # SCP Transfer section (bottom half)
+                scp_y = sep_y + 1
+                transfer_status = status.get('transfer_status', 'pending')
+                
+                if transfer_status == 'pending':
+                    if status['downloaded_files']:
+                        stdscr.addstr(scp_y, left_width + 2, f"Ready: {len(status['downloaded_files'])} file(s)"[:right_width-3])
+                        scp_y += 1
+                        # Show downloaded files waiting for transfer
+                        for filepath in status['downloaded_files'][:height - scp_y - 2]:
+                            filename = os.path.basename(filepath)[:right_width-5]
+                            stdscr.attron(curses.color_pair(2))
+                            stdscr.addstr(scp_y, left_width + 2, f"✓ {filename}"[:right_width-3])
+                            stdscr.attroff(curses.color_pair(2))
+                            scp_y += 1
+                    else:
+                        stdscr.addstr(scp_y, left_width + 2, "Waiting..."[:right_width-3])
+                elif transfer_status == 'transferring':
+                    stdscr.attron(curses.color_pair(3))
+                    stdscr.addstr(scp_y, left_width + 2, "Transferring to remote..."[:right_width-3])
+                    stdscr.attroff(curses.color_pair(3))
+                    scp_y += 1
+                    # Show files being transferred
+                    for filepath in status['downloaded_files'][:height - scp_y - 2]:
+                        filename = os.path.basename(filepath)[:right_width-5]
+                        stdscr.addstr(scp_y, left_width + 2, f"→ {filename}"[:right_width-3])
+                        scp_y += 1
+                elif transfer_status == 'completed':
+                    stdscr.attron(curses.color_pair(2))
+                    stdscr.addstr(scp_y, left_width + 2, "✓ Transfer complete!"[:right_width-3])
+                    stdscr.attroff(curses.color_pair(2))
+                elif transfer_status == 'failed':
+                    stdscr.attron(curses.color_pair(4))
+                    stdscr.addstr(scp_y, left_width + 2, "✗ Transfer failed"[:right_width-3])
+                    stdscr.attroff(curses.color_pair(4))
+            else:
+                # Local download - original layout
+                summary = f"Total: {iso_count} | Done: {status['completed']}"
+                stdscr.addstr(download_y, left_width + 2, summary[:right_width-3])
+                download_y += 1
+                
+                if status['queued'] > 0:
+                    queued_line = f"Queued: {status['queued']}"
+                    stdscr.addstr(download_y, left_width + 2, queued_line[:right_width-3])
+                    download_y += 1
             
             if status['failed'] > 0:
                 stdscr.attron(curses.color_pair(4))
@@ -1007,20 +1276,34 @@ def curses_menu(stdscr, distro_dict):
                 item_path = "/".join(path_stack + [item])
                 selected_items.add(item_path)
         elif key in [ord('d'), ord('D')]:
-            # Set target directory
-            curses.endwin()
-            target_directory = input("\nEnter target directory (or hostname:/path for remote): ").strip()
+            # Set target directory - show popup selector
+            selected_location = show_location_popup(stdscr)
+            
+            if selected_location is False:
+                # User cancelled
+                continue
+            elif selected_location is None:
+                # User wants to enter new location
+                curses.endwin()
+                target_directory = input("\nEnter target directory (or hostname:/path for remote): ").strip()
+            else:
+                # User selected from history
+                target_directory = selected_location
             
             # Initialize download manager if directory was set
             if target_directory and not download_manager:
+                # Save to history
+                add_to_location_history(target_directory)
+                
                 is_remote = ':' in target_directory and not target_directory.startswith('/')
                 
                 if is_remote:
                     remote_host, remote_path = target_directory.split(':', 1)
+                    ssh_password = None
                     
-                    # Test SSH connection
-                    print(f"\nTesting SSH connection to {remote_host}...")
+                    # Test SSH connection (non-interactive, quick test)
                     import subprocess
+                    import shutil
                     test_result = subprocess.run(
                         ['ssh', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=5', 
                          remote_host, 'echo "SSH OK"'], 
@@ -1030,18 +1313,11 @@ def curses_menu(stdscr, distro_dict):
                     )
                     
                     if test_result.returncode != 0:
-                        print(f"\nSSH connection test failed. This might mean:")
-                        print("  - Password authentication is required")
-                        print("  - SSH keys are not set up")
-                        print("  - Host is unreachable")
-                        print(f"\nError: {test_result.stderr.strip()}")
-                        print("\nFor password-free operation, set up SSH keys:")
-                        print(f"  ssh-copy-id {remote_host}")
-                        print("\nPress Enter to continue anyway or Ctrl+C to cancel...")
-                        try:
-                            input()
-                        except KeyboardInterrupt:
-                            print("\nCancelled.")
+                        # SSH keys not set up, need password
+                        ssh_password = show_password_popup(stdscr, f"Password for {remote_host}:")
+                        
+                        if ssh_password is None:
+                            # User cancelled password entry
                             stdscr = curses.initscr()
                             curses.curs_set(0)
                             curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_CYAN)
@@ -1050,22 +1326,83 @@ def curses_menu(stdscr, distro_dict):
                             curses.init_pair(4, curses.COLOR_RED, curses.COLOR_BLACK)
                             target_directory = None
                             continue
-                    else:
-                        print("SSH connection OK!")
-                    
-                    if target_directory:
-                        # Create remote directory
-                        print(f"Creating remote directory {remote_path}...")
-                        mkdir_result = subprocess.run(
-                            ['ssh', remote_host, f'mkdir -p {remote_path}'], 
-                            capture_output=True, 
+                        
+                        # Check if sshpass is available
+                        if not shutil.which('sshpass'):
+                            curses.endwin()
+                            print("\n✗ sshpass not found. Install it for password authentication:")
+                            print("  Fedora/RHEL: sudo dnf install sshpass")
+                            print("  Debian/Ubuntu: sudo apt install sshpass")
+                            print("\nOr set up SSH keys for password-free access:")
+                            print(f"  ssh-copy-id {remote_host}")
+                            print("\nPress Enter to continue...")
+                            input()
+                            stdscr = curses.initscr()
+                            curses.curs_set(0)
+                            curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_CYAN)
+                            curses.init_pair(2, curses.COLOR_GREEN, curses.COLOR_BLACK)
+                            curses.init_pair(3, curses.COLOR_YELLOW, curses.COLOR_BLACK)
+                            curses.init_pair(4, curses.COLOR_RED, curses.COLOR_BLACK)
+                            target_directory = None
+                            continue
+                        
+                        # Test connection with password
+                        test_with_pw = subprocess.run(
+                            ['sshpass', '-p', ssh_password, 'ssh', '-o', 'ConnectTimeout=5',
+                             remote_host, 'echo "SSH OK"'],
+                            capture_output=True,
                             text=True,
                             timeout=10
                         )
-                        if mkdir_result.returncode != 0:
-                            print(f"Warning: Could not create remote directory: {mkdir_result.stderr}")
                         
-                        download_manager = DownloadManager(None, is_remote=True, remote_host=remote_host, remote_path=remote_path)
+                        if test_with_pw.returncode != 0:
+                            curses.endwin()
+                            print(f"\n✗ SSH authentication failed: {test_with_pw.stderr.strip()}")
+                            print("Press Enter to continue...")
+                            input()
+                            stdscr = curses.initscr()
+                            curses.curs_set(0)
+                            curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_CYAN)
+                            curses.init_pair(2, curses.COLOR_GREEN, curses.COLOR_BLACK)
+                            curses.init_pair(3, curses.COLOR_YELLOW, curses.COLOR_BLACK)
+                            curses.init_pair(4, curses.COLOR_RED, curses.COLOR_BLACK)
+                            target_directory = None
+                            continue
+                    
+                    if target_directory:
+                        # Create remote directory
+                        if ssh_password:
+                            mkdir_result = subprocess.run(
+                                ['sshpass', '-p', ssh_password, 'ssh', remote_host, 
+                                 f'mkdir -p {remote_path}'],
+                                capture_output=True,
+                                text=True,
+                                timeout=30
+                            )
+                        else:
+                            mkdir_result = subprocess.run(
+                                ['ssh', remote_host, f'mkdir -p {remote_path}'],
+                                capture_output=True,
+                                text=True,
+                                timeout=30
+                            )
+                        
+                        if mkdir_result.returncode != 0:
+                            curses.endwin()
+                            print(f"\n✗ Could not create remote directory: {mkdir_result.stderr.strip()}")
+                            print("Press Enter to continue...")
+                            input()
+                            stdscr = curses.initscr()
+                            curses.curs_set(0)
+                            curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_CYAN)
+                            curses.init_pair(2, curses.COLOR_GREEN, curses.COLOR_BLACK)
+                            curses.init_pair(3, curses.COLOR_YELLOW, curses.COLOR_BLACK)
+                            curses.init_pair(4, curses.COLOR_RED, curses.COLOR_BLACK)
+                            target_directory = None
+                            continue
+                        
+                        download_manager = DownloadManager(None, is_remote=True, remote_host=remote_host, 
+                                                         remote_path=remote_path, ssh_password=ssh_password)
                 else:
                     Path(target_directory).mkdir(parents=True, exist_ok=True)
                     download_manager = DownloadManager(target_directory)
