@@ -247,18 +247,22 @@ This repository is provided for informational purposes and adheres to the licens
 
 ---
 
-## Fedora Workstation
+## Fedora
+
+### Workstation
 - [Fedora 43 Workstation](https://download.fedoraproject.org/pub/fedora/linux/releases/43/Workstation/x86_64/iso/Fedora-Workstation-Live-43-1.6.x86_64.iso)
+
+### Spins
 - [Fedora 43 Budgie](https://download.fedoraproject.org/pub/fedora/linux/releases/43/Spins/x86_64/iso/Fedora-Budgie-Live-43-1.6.x86_64.iso)
-- [Fedora 43 COSMIC](https://download.fedoraproject.org/pub/fedora/linux/releases/43/Spins/x86_64/iso/Fedora-COSMIC-Live-43-1.6.x86_64.iso)
 - [Fedora 43 Cinnamon](https://download.fedoraproject.org/pub/fedora/linux/releases/43/Spins/x86_64/iso/Fedora-Cinnamon-Live-x86_64-43-1.6.iso)
+- [Fedora 43 COSMIC](https://download.fedoraproject.org/pub/fedora/linux/releases/43/Spins/x86_64/iso/Fedora-COSMIC-Live-43-1.6.x86_64.iso)
+- [Fedora 43 i3](https://download.fedoraproject.org/pub/fedora/linux/releases/43/Spins/x86_64/iso/Fedora-i3-Live-43-1.6.x86_64.iso)
 - [Fedora 43 KDE](https://download.fedoraproject.org/pub/fedora/linux/releases/43/Spins/x86_64/iso/Fedora-KDE-Mobile-Live-43-1.6.x86_64.iso)
 - [Fedora 43 LXDE](https://download.fedoraproject.org/pub/fedora/linux/releases/43/Spins/x86_64/iso/Fedora-LXDE-Live-x86_64-43-1.6.iso)
 - [Fedora 43 LXQt](https://download.fedoraproject.org/pub/fedora/linux/releases/43/Spins/x86_64/iso/Fedora-LXQt-Live-43-1.6.x86_64.iso)
-- [Fedora 43 MATE_Compiz](https://download.fedoraproject.org/pub/fedora/linux/releases/43/Spins/x86_64/iso/Fedora-MATE_Compiz-Live-x86_64-43-1.6.iso)
+- [Fedora 43 MATE Compiz](https://download.fedoraproject.org/pub/fedora/linux/releases/43/Spins/x86_64/iso/Fedora-MATE_Compiz-Live-x86_64-43-1.6.iso)
 - [Fedora 43 MiracleWM](https://download.fedoraproject.org/pub/fedora/linux/releases/43/Spins/x86_64/iso/Fedora-MiracleWM-Live-43-1.6.x86_64.iso)
 - [Fedora 43 SoaS](https://download.fedoraproject.org/pub/fedora/linux/releases/43/Spins/x86_64/iso/Fedora-SoaS-Live-43-1.6.x86_64.iso)
 - [Fedora 43 Sway](https://download.fedoraproject.org/pub/fedora/linux/releases/43/Spins/x86_64/iso/Fedora-Sway-Live-x86_64-43-1.6.iso)
 - [Fedora 43 Xfce](https://download.fedoraproject.org/pub/fedora/linux/releases/43/Spins/x86_64/iso/Fedora-Xfce-Live-43-1.6.x86_64.iso)
-- [Fedora 43 i3](https://download.fedoraproject.org/pub/fedora/linux/releases/43/Spins/x86_64/iso/Fedora-i3-Live-43-1.6.x86_64.iso)
 
