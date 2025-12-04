@@ -31,12 +31,28 @@ def configure_proxmox_menu():
     if not username:
         username = current_user
     
-    password = getpass.getpass(f"Password for {username}@{hostname}: ")
-    
-    # Test connection
+    # Test connection with SSH keys first
     print("\nTesting connection...")
-    pve = ProxmoxTarget(hostname, username, password)
-    success, message = pve.test_connection()
+    pve = ProxmoxTarget(hostname, username)
+    
+    # Check if SSH keys are configured
+    if pve.check_ssh_keys():
+        print("✓ SSH keys configured - no password needed")
+        success, message = True, "Connection successful (SSH keys)"
+    else:
+        print("⚠ SSH keys not configured")
+        print("  For automated deployments (cron), set up SSH keys:")
+        print(f"    ssh-copy-id {username}@{hostname}")
+        print()
+        
+        # Prompt for password for testing
+        password = getpass.getpass(f"Password for {username}@{hostname} (for testing): ")
+        if not password:
+            print("✗ Password required for testing")
+            return False
+        
+        pve.password = password
+        success, message = pve.test_connection(interactive=True)
     
     if not success:
         print(f"✗ {message}")

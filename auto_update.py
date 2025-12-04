@@ -273,12 +273,13 @@ def auto_update_distributions(download_dir: Path, deploy_to_proxmox: bool = True
     return results
 
 
-def deploy_files_to_proxmox(files: List[str]) -> List[Dict]:
+def deploy_files_to_proxmox(files: List[str], interactive: bool = False) -> List[Dict]:
     """
     Deploy files to Proxmox using configured settings.
     
     Args:
         files: List of file paths to deploy
+        interactive: Allow password prompts (False for cron/auto mode)
         
     Returns:
         List of deployment results
@@ -290,34 +291,63 @@ def deploy_files_to_proxmox(files: List[str]) -> List[Dict]:
     username = pve_config.get('username', 'root')
     
     if not hostname:
-        print("✗ Proxmox not configured")
+        print("✗ Proxmox not configured. Run: python3 distroget.py --configure")
         return []
     
-    # For automated deployment, we need SSH key auth or stored password
-    # For now, skip deployment if no config
     print(f"  Connecting to {hostname}...")
     
-    # This would need SSH key auth for cron jobs
-    # For now, we'll return a placeholder
-    deployments = []
+    # Initialize ProxmoxTarget without password
+    pve = ProxmoxTarget(hostname, username)
     
+    # Check SSH keys first
+    if not pve.check_ssh_keys():
+        if not interactive:
+            print(f"✗ SSH keys not configured for {username}@{hostname}")
+            print(f"  For automated deployment, set up SSH keys:")
+            print(f"    ssh-copy-id {username}@{hostname}")
+            print(f"  Or run interactively once to test password authentication.")
+            return []
+        else:
+            # Interactive mode - prompt for password
+            password = pve.prompt_password()
+            if not password:
+                print("✗ Password required but not provided")
+                return []
+            pve.password = password
+    
+    # Test connection
+    success, message = pve.test_connection(interactive=interactive)
+    if not success:
+        print(f"✗ {message}")
+        return []
+    
+    print(f"  ✓ Connected")
+    
+    # Deploy files
+    deployments = []
     for filepath in files:
-        file_type = detect_file_type(filepath)
+        file_type = detect_file_type(Path(filepath))
         storage = config.get_storage_for_type(file_type)
         
         if not storage:
             print(f"  ⚠ No storage configured for {file_type}, skipping {Path(filepath).name}")
             continue
         
-        # Note: Actual deployment would happen here with SSH keys
-        print(f"  • {Path(filepath).name} → {storage} (deployment would happen with SSH keys)")
+        print(f"  Uploading {Path(filepath).name} to {storage}...")
         
-        deployments.append({
-            'file': filepath,
-            'storage': storage,
-            'type': file_type,
-            'status': 'configured_only'  # Would be 'deployed' with SSH keys
-        })
+        try:
+            if pve.upload_file(Path(filepath), storage):
+                print(f"    ✓ Deployed successfully")
+                deployments.append({
+                    'file': filepath,
+                    'storage': storage,
+                    'type': file_type,
+                    'status': 'deployed'
+                })
+            else:
+                print(f"    ✗ Upload failed")
+        except Exception as e:
+            print(f"    ✗ Error: {e}")
     
     return deployments
 
@@ -341,15 +371,21 @@ def main():
                        help='Download directory')
     parser.add_argument('--no-deploy', action='store_true',
                        help='Skip Proxmox deployment')
+    parser.add_argument('--deploy-to-proxmox', action='store_true',
+                       help='Deploy to Proxmox (default when configured)')
     parser.add_argument('--dry-run', action='store_true',
                        help='Show what would be updated without doing it')
     
     args = parser.parse_args()
     
+    # Determine deployment: --deploy-to-proxmox OR (not --no-deploy)
+    deploy = args.deploy_to_proxmox or (not args.no_deploy)
+    
     if args.dry_run:
         config = ConfigManager()
         distros = config.get_auto_update_distros()
         enabled = config.is_auto_update_enabled()
+        auto_deploy_items = config.get_auto_deploy_items()
         
         print("Dry Run - Auto-Update Configuration")
         print("=" * 80)
@@ -358,14 +394,18 @@ def main():
         for distro in distros:
             print(f"  • {distro}")
         print()
+        print(f"Auto-deploy items: {len(auto_deploy_items)}")
+        for item in auto_deploy_items:
+            print(f"  • {item}")
+        print()
         print(f"Download directory: {args.download_dir}")
-        print(f"Deploy to Proxmox: {not args.no_deploy}")
+        print(f"Deploy to Proxmox: {deploy}")
         return
     
     # Run auto-update
     results = auto_update_distributions(
         args.download_dir,
-        deploy_to_proxmox=not args.no_deploy
+        deploy_to_proxmox=deploy
     )
     
     # Exit with appropriate code

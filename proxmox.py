@@ -18,21 +18,77 @@ class ProxmoxTarget:
         Args:
             hostname: PVE hostname or IP
             username: SSH username (default: root)
-            password: SSH password (optional, will prompt if not provided)
+            password: SSH password (optional, NEVER stored in config)
         """
         self.hostname = hostname
         self.username = username
-        self.password = password
+        self.password = password  # Runtime only, never persisted
         self._storages = None
+        self._has_ssh_keys = None
     
-    def test_connection(self) -> Tuple[bool, str]:
+    def check_ssh_keys(self) -> bool:
+        """
+        Check if SSH key authentication is configured.
+        
+        Returns:
+            True if SSH keys work, False if password needed
+        """
+        if self._has_ssh_keys is not None:
+            return self._has_ssh_keys
+        
+        try:
+            cmd = ['ssh', '-o', 'StrictHostKeyChecking=no', '-o', 'ConnectTimeout=3',
+                   '-o', 'BatchMode=yes',  # Prevents password prompts
+                   f'{self.username}@{self.hostname}', 'echo', 'ok']
+            
+            result = subprocess.run(cmd, capture_output=True, timeout=5)
+            self._has_ssh_keys = (result.returncode == 0)
+            return self._has_ssh_keys
+        except Exception:
+            self._has_ssh_keys = False
+            return False
+    
+    def prompt_password(self) -> Optional[str]:
+        """
+        Prompt for SSH password interactively.
+        
+        Returns:
+            Password string or None if cancelled
+        """
+        import getpass
+        try:
+            password = getpass.getpass(f"Password for {self.username}@{self.hostname}: ")
+            return password if password else None
+        except (KeyboardInterrupt, EOFError):
+            return None
+    
+    def test_connection(self, interactive: bool = True) -> Tuple[bool, str]:
         """
         Test SSH connection to Proxmox server.
+        
+        Args:
+            interactive: Allow password prompts (False for cron jobs)
         
         Returns:
             Tuple of (success: bool, message: str)
         """
         try:
+            # First, try SSH keys
+            if self.check_ssh_keys():
+                self.password = None  # Clear any password
+                return True, "Connection successful (SSH keys)"
+            
+            # SSH keys not configured, need password
+            if not self.password:
+                if not interactive:
+                    return False, "SSH keys not configured. For cron jobs, run: ssh-copy-id {}@{}".format(self.username, self.hostname)
+                
+                # Prompt for password
+                self.password = self.prompt_password()
+                if not self.password:
+                    return False, "Password required but not provided"
+            
+            # Try connection with password
             # Set password in environment if provided
             env = os.environ.copy()
             if self.password:

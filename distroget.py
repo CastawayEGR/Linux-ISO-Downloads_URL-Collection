@@ -1646,9 +1646,10 @@ if __name__ == "__main__":
             from configure import main_config_menu
             main_config_menu()
         elif sys.argv[1] == '--auto-update':
-            # Run automatic update
-            from auto_update import main as auto_update_main
-            auto_update_main()
+            # Run automatic update - remove --auto-update from argv so argparse works
+            sys.argv.pop(1)  # Remove '--auto-update'
+            from auto_update import main
+            main()
         elif sys.argv[1] == '--help' or sys.argv[1] == '-h':
             print("distroget - Linux ISO/Cloud Image Downloader and Proxmox Deployer")
             print()
@@ -1656,10 +1657,18 @@ if __name__ == "__main__":
             print("  python3 distroget.py                      Interactive TUI mode")
             print("  python3 distroget.py --configure          Configure Proxmox and auto-update")
             print("  python3 distroget.py --auto-update        Run automatic updates (for cron)")
+            print("  python3 distroget.py --auto-update --deploy-to-proxmox")
+            print("                                            Auto-update + deploy to Proxmox")
             print("  python3 distroget.py --deploy-to-proxmox  Deploy local files to Proxmox")
             print("  python3 distroget.py --update-only        Update README.md versions (CI mode)")
             print("  python3 distroget.py --update-repo        Update GitHub repository")
             print("  python3 distroget.py --help               Show this help")
+            print()
+            print("Auto-Update Options:")
+            print("  --deploy-to-proxmox       Deploy marked [a] items to Proxmox")
+            print("  --no-deploy               Skip Proxmox deployment")
+            print("  --download-dir DIR        Custom download directory")
+            print("  --dry-run                 Show what would be done")
             print()
             print("Configuration:")
             print("  Run '--configure' to set up:")
@@ -1667,9 +1676,23 @@ if __name__ == "__main__":
             print("    • Storage mappings (ISO, LXC, snippets)")
             print("    • Auto-update distribution selection")
             print()
+            print("TUI Keys:")
+            print("  ↑↓        Navigate menu")
+            print("  →/Enter   Expand category")
+            print("  ←/ESC     Go back")
+            print("  SPACE     Select/download item")
+            print("  a         Toggle auto-deploy marker [a]")
+            print("  A         Select all in current menu")
+            print("  d         Set download directory")
+            print("  q         Quit")
+            print()
             print("Automation:")
-            print("  Add to crontab for daily updates:")
-            print("    0 2 * * * /usr/bin/python3 /path/to/distroget.py --auto-update")
+            print("  Add to crontab for nightly updates and deployment:")
+            print("    0 2 * * * cd /path/to/distroget && \\")
+            print("              python3 distroget.py --auto-update --deploy-to-proxmox")
+            print()
+            print("  Or just updates without deployment:")
+            print("    0 2 * * * python3 /path/to/distroget.py --auto-update --no-deploy")
             sys.exit(0)
         else:
             print(f"Unknown option: {sys.argv[1]}")

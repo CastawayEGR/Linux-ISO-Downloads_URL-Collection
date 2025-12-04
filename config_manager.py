@@ -39,7 +39,7 @@ class ConfigManager:
             'proxmox': {
                 'hostname': '',
                 'username': 'root',
-                'use_password': True,
+                # NOTE: Password is NEVER stored - use SSH keys or prompt at runtime
                 'storage_mappings': {
                     'iso': '',
                     'vztmpl': '',
