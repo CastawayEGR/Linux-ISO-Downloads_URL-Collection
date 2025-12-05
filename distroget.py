@@ -1357,6 +1357,34 @@ def curses_menu(stdscr, distro_dict):
             # Local downloads - just wait for completion
             download_manager.download_queue.join()
             download_manager.stop()
+            
+            # Show download summary
+            status = download_manager.get_status()
+            completed_count = status['completed']
+            failed_count = status['failed']
+            
+            print("\n" + "=" * 80)
+            print("Download Summary")
+            print("=" * 80)
+            
+            if completed_count > 0:
+                print(f"✓ Successfully downloaded {completed_count} file(s) to:")
+                print(f"  {target_directory}")
+                print()
+                
+                # List downloaded files
+                for filepath in status['downloaded_files']:
+                    filename = os.path.basename(filepath)
+                    size = os.path.getsize(filepath) if os.path.exists(filepath) else 0
+                    print(f"  • {filename} ({format_size(size)})")
+            
+            if failed_count > 0:
+                print(f"\n✗ Failed to download {failed_count} file(s)")
+            
+            if completed_count == 0 and failed_count == 0:
+                print("No files were downloaded (all may already exist)")
+            
+            print("=" * 80)
     
     return final_urls, target_directory
 
@@ -1494,15 +1522,9 @@ def main():
         print("No ISOs selected, exiting.")
         sys.exit(0)
     
-    # If downloads already happened in background, we're done
-    if target_dir:
-        print("Downloads completed in background.")
-        sys.exit(0)
-    
-    # Save target directory to config if set
-    if target_dir:
-        config['target_directory'] = target_dir
-        save_config(config)
+    # Downloads already happened in background - summary was already shown
+    # Just exit gracefully
+    sys.exit(0)
 
 def update_only_mode():
     """Non-interactive update mode for CI/CD."""
