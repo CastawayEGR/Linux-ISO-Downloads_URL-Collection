@@ -21,9 +21,13 @@ def temp_config_file(temp_config_dir):
     sample_config = {
         "location_history": ["/tmp/downloads", "/home/user/isos"],
         "proxmox": {
-            "host": "192.168.1.100",
-            "user": "root",
-            "storage": "local"
+            "hostname": "192.168.1.100",
+            "username": "root",
+            "storage_mappings": {
+                "iso": "local",
+                "vztmpl": "local",
+                "snippets": "local"
+            }
         },
         "auto_update": {
             "enabled": True,

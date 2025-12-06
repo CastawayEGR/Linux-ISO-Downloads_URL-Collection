@@ -424,11 +424,15 @@ def detect_file_type(filename: str) -> str:
     Detect content type based on file extension.
     
     Args:
-        filename: File name or path
+        filename: File name or path (str or Path)
         
     Returns:
         Content type string ('iso', 'vztmpl', or 'snippets')
     """
+    # Convert Path to string if needed
+    if hasattr(filename, '__fspath__'):
+        filename = str(filename)
+    
     filename_lower = filename.lower()
     
     if filename_lower.endswith(('.iso',)):
