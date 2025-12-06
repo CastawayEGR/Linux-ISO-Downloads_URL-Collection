@@ -193,16 +193,23 @@ class DownloadManager:
         """Decompress a .zip file and return the first ISO/IMG file found."""
         try:
             extract_dir = os.path.dirname(filepath)
+            extract_dir_abs = os.path.abspath(extract_dir)
             
             with zipfile.ZipFile(filepath, 'r') as zip_ref:
                 # List all files in the zip
                 file_list = zip_ref.namelist()
                 
+                # Validate all paths to prevent path traversal attacks
+                for member in file_list:
+                    member_path = os.path.abspath(os.path.join(extract_dir, member))
+                    if not member_path.startswith(extract_dir_abs + os.sep) and member_path != extract_dir_abs:
+                        raise Exception(f"Attempted path traversal in zip file: {member}")
+                
                 # Find ISO or IMG files
                 iso_files = [f for f in file_list if f.lower().endswith(('.iso', '.img'))]
                 
                 if iso_files:
-                    # Extract the first ISO/IMG file
+                    # Extract the first ISO/IMG file (already validated above)
                     target_file = iso_files[0]
                     zip_ref.extract(target_file, extract_dir)
                     extracted_path = os.path.join(extract_dir, target_file)
@@ -211,7 +218,7 @@ class DownloadManager:
                     os.remove(filepath)
                     return extracted_path
                 else:
-                    # Extract all files if no ISO/IMG found
+                    # Extract all files if no ISO/IMG found (already validated above)
                     zip_ref.extractall(extract_dir)
                     os.remove(filepath)
                     
